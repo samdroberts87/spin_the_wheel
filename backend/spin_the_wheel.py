@@ -1,38 +1,34 @@
 import json
 import random
+import re
 
 def lambda_handler(event, context):
-    """AWS Lambda function to randomly pick a name from a list."""
-    
-    try:
-        # Parse request body
-        body = json.loads(event.get("body", "{}"))
+    # Get query string parameters
+    params = event.get("queryStringParameters", {})
+    items_str = params.get("items", "")
 
-        # Validate input
-        if "names" not in body or not isinstance(body["names"], list):
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"error": "Please provide a list of names."}),
-            }
+    # Convert comma-separated string to list
+    items_list = [item.strip() for item in re.split(r"[,\s]+", items_str) if item.strip()]
 
-        names_list = body["names"]
+    # Common headers (including CORS)
+    headers = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"  # Enable CORS
+    }
 
-        if not names_list:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"error": "Name list cannot be empty."}),
-            }
-
-        # Pick a random name
-        chosen_name = random.choice(names_list).upper()
-
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"chosen": chosen_name}),
-        }
-
-    except json.JSONDecodeError:
+    # Check if list is not empty
+    if not items_list:
         return {
             "statusCode": 400,
-            "body": json.dumps({"error": "Invalid JSON format."}),
+            "headers": headers,
+            "body": json.dumps({ "error": "You must enter at least 1 name" })
         }
+
+    # Choose a random item
+    chosen = random.choice(items_list).title()
+
+    return {
+        "statusCode": 200,
+        "headers": headers,
+        "body": json.dumps({ "random_item": f"{chosen} has been selected" })
+    }
